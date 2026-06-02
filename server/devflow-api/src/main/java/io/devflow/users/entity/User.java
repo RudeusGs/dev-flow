@@ -30,7 +30,7 @@ public class User extends BaseEntity {
     @Column(name = "display_name", length = 120)
     private String displayName;
 
-    @Column(name = "avatar_url")
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Column(name = "bio", columnDefinition = "TEXT")
@@ -42,7 +42,7 @@ public class User extends BaseEntity {
     @Column(name = "company", length = 120)
     private String company;
 
-    @Column(name = "website_url")
+    @Column(name = "website_url", columnDefinition = "TEXT")
     private String websiteUrl;
 
     @Enumerated(EnumType.STRING)
