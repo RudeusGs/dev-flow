@@ -18,9 +18,16 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "pull_request_file_changes",
-        indexes = @Index(name = "idx_pull_request_file_changes_pull_request", columnList = "pull_request_id")
+        indexes = {
+                @Index(name = "idx_pull_request_file_changes_repository", columnList = "repository_id"),
+                @Index(name = "idx_pull_request_file_changes_pull_request", columnList = "pull_request_id"),
+                @Index(name = "idx_pull_request_file_changes_source_file", columnList = "source_file_id")
+        }
 )
 public class PullRequestFileChange extends CreatedEntity {
+
+    @Column(name = "repository_id", nullable = false)
+    private UUID repositoryId;
 
     @Column(name = "pull_request_id", nullable = false)
     private UUID pullRequestId;
@@ -38,12 +45,21 @@ public class PullRequestFileChange extends CreatedEntity {
     @Column(name = "new_path", columnDefinition = "TEXT")
     private String newPath;
 
+    @Column(name = "old_blob_hash", length = 80)
+    private String oldBlobHash;
+
+    @Column(name = "new_blob_hash", length = 80)
+    private String newBlobHash;
+
     @Column(name = "additions", nullable = false)
     private int additions;
 
     @Column(name = "deletions", nullable = false)
     private int deletions;
 
-    @Column(name = "patch_text", columnDefinition = "TEXT")
-    private String patchText;
+    @Column(name = "diff_hunk_count", nullable = false)
+    private int diffHunkCount;
+
+    @Column(name = "patch_storage_key", columnDefinition = "TEXT")
+    private String patchStorageKey;
 }

@@ -5,9 +5,11 @@ import io.devflow.auth.entity.EmailVerificationToken;
 import io.devflow.auth.entity.PasswordResetToken;
 import io.devflow.auth.entity.RefreshToken;
 import io.devflow.branches.entity.Branch;
+import io.devflow.branches.entity.BranchCommit;
 import io.devflow.branches.entity.BranchProtectionRule;
 import io.devflow.commits.entity.Commit;
 import io.devflow.commits.entity.CommitFileChange;
+import io.devflow.commits.entity.CommitParent;
 import io.devflow.commits.entity.CommitStatus;
 import io.devflow.contributions.entity.ContributionDay;
 import io.devflow.contributions.entity.ContributionEvent;
@@ -93,9 +95,11 @@ class EntityMappingsTests {
                 RepositoryTag.class,
                 RepositoryRelease.class,
                 Branch.class,
+                BranchCommit.class,
                 BranchProtectionRule.class,
                 SourceFile.class,
                 Commit.class,
+                CommitParent.class,
                 CommitFileChange.class,
                 CommitStatus.class,
                 ContributionEvent.class,

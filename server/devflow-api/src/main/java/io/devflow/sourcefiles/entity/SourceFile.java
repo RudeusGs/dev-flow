@@ -58,11 +58,14 @@ public class SourceFile extends BaseEntity {
     @Column(name = "size_bytes", nullable = false)
     private long sizeBytes;
 
-    @Column(name = "content_text", columnDefinition = "TEXT")
-    private String contentText;
+    @Column(name = "blob_hash", length = 80)
+    private String blobHash;
 
     @Column(name = "content_sha256", length = 64)
     private String contentSha256;
+
+    @Column(name = "object_storage_key", columnDefinition = "TEXT")
+    private String objectStorageKey;
 
     @Column(name = "is_binary", nullable = false)
     private boolean binary;

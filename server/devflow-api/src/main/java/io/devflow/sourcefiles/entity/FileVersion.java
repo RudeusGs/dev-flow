@@ -17,14 +17,20 @@ import java.util.UUID;
 @Table(
         name = "file_versions",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_file_versions_source_file_commit",
-                columnNames = {"source_file_id", "commit_id"}
+                name = "uk_file_versions_commit_path",
+                columnNames = {"commit_id", "path"}
         ),
-        indexes = @Index(name = "idx_file_versions_commit", columnList = "commit_id")
+        indexes = {
+                @Index(name = "idx_file_versions_repository", columnList = "repository_id"),
+                @Index(name = "idx_file_versions_source_file", columnList = "source_file_id")
+        }
 )
 public class FileVersion extends CreatedEntity {
 
-    @Column(name = "source_file_id", nullable = false)
+    @Column(name = "repository_id", nullable = false)
+    private UUID repositoryId;
+
+    @Column(name = "source_file_id")
     private UUID sourceFileId;
 
     @Column(name = "commit_id", nullable = false)
@@ -33,11 +39,17 @@ public class FileVersion extends CreatedEntity {
     @Column(name = "path", nullable = false, columnDefinition = "TEXT")
     private String path;
 
-    @Column(name = "content_text", columnDefinition = "TEXT")
-    private String contentText;
+    @Column(name = "file_mode", length = 20)
+    private String fileMode;
+
+    @Column(name = "blob_hash", length = 80)
+    private String blobHash;
 
     @Column(name = "content_sha256", length = 64)
     private String contentSha256;
+
+    @Column(name = "object_storage_key", columnDefinition = "TEXT")
+    private String objectStorageKey;
 
     @Column(name = "size_bytes", nullable = false)
     private long sizeBytes;
