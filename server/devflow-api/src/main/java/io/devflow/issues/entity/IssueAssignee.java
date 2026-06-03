@@ -1,43 +1,39 @@
 package io.devflow.issues.entity;
 
-import io.devflow.issues.entity.id.IssueAssigneeId;
-import io.devflow.users.entity.User;
+import io.devflow.common.entity.UuidEntity;
 import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "issue_assignees")
-public class IssueAssignee {
+@Table(
+        name = "issue_assignees",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_issue_assignees_issue_user",
+                columnNames = {"issue_id", "user_id"}
+        ),
+        indexes = @Index(name = "idx_issue_assignees_user", columnList = "user_id")
+)
+public class IssueAssignee extends UuidEntity {
 
-    @EmbeddedId
-    private IssueAssigneeId id = new IssueAssigneeId();
+    @Column(name = "issue_id", nullable = false)
+    private UUID issueId;
 
-    @MapsId("issueId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "issue_id", nullable = false)
-    private Issue issue;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
-    @MapsId("userId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_by_id")
-    private User assignedBy;
+    @Column(name = "assigned_by_id")
+    private UUID assignedById;
 
     @Column(name = "assigned_at", nullable = false, updatable = false)
     private Instant assignedAt;

@@ -1,12 +1,9 @@
 package io.devflow.shared.entity;
 
 import io.devflow.common.entity.CreatedEntity;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,12 +14,14 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "attachments")
+@Table(
+        name = "attachments",
+        indexes = @Index(name = "idx_attachments_target", columnList = "target_type, target_id")
+)
 public class Attachment extends CreatedEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploaded_by_id")
-    private User uploadedBy;
+    @Column(name = "uploaded_by_id")
+    private UUID uploadedById;
 
     @Column(name = "target_type", length = 80)
     private String targetType;

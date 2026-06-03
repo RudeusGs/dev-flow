@@ -6,7 +6,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,7 +17,14 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_users_username", columnNames = "username"),
+                @UniqueConstraint(name = "uk_users_email", columnNames = "email")
+        },
+        indexes = @Index(name = "idx_users_status", columnList = "status")
+)
 public class User extends BaseEntity {
 
     @Column(name = "username", nullable = false, length = 50)

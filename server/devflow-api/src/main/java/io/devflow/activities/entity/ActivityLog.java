@@ -1,13 +1,9 @@
 package io.devflow.activities.entity;
 
 import io.devflow.common.entity.CreatedEntity;
-import io.devflow.repos.entity.Repository;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,16 +17,20 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "activity_logs")
+@Table(
+        name = "activity_logs",
+        indexes = {
+                @Index(name = "idx_activity_logs_repository", columnList = "repository_id"),
+                @Index(name = "idx_activity_logs_entity", columnList = "entity_type, entity_id")
+        }
+)
 public class ActivityLog extends CreatedEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "actor_id")
-    private User actor;
+    @Column(name = "actor_id")
+    private UUID actorId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "repository_id")
-    private Repository repository;
+    @Column(name = "repository_id")
+    private UUID repositoryId;
 
     @Column(name = "entity_type", nullable = false, length = 80)
     private String entityType;

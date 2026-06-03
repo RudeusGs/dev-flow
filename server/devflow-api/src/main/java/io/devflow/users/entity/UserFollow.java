@@ -1,46 +1,32 @@
 package io.devflow.users.entity;
 
-import io.devflow.users.entity.id.UserFollowId;
+import io.devflow.common.entity.CreatedEntity;
 import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
-import jakarta.persistence.PrePersist;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "user_follows")
-public class UserFollow {
+@Table(
+        name = "user_follows",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_user_follows_follower_following",
+                columnNames = {"follower_id", "following_id"}
+        ),
+        indexes = @Index(name = "idx_user_follows_following", columnList = "following_id")
+)
+public class UserFollow extends CreatedEntity {
 
-    @EmbeddedId
-    private UserFollowId id = new UserFollowId();
+    @Column(name = "follower_id", nullable = false)
+    private UUID followerId;
 
-    @MapsId("followerId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "follower_id", nullable = false)
-    private User follower;
-
-    @MapsId("followingId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "following_id", nullable = false)
-    private User following;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @PrePersist
-    protected void initializeCreatedAt() {
-        if (createdAt == null) {
-            createdAt = Instant.now();
-        }
-    }
+    @Column(name = "following_id", nullable = false)
+    private UUID followingId;
 }

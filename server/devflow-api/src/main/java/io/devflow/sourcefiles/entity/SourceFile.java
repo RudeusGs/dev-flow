@@ -1,38 +1,43 @@
 package io.devflow.sourcefiles.entity;
 
-import io.devflow.branches.entity.Branch;
 import io.devflow.common.entity.BaseEntity;
-import io.devflow.repos.entity.Repository;
 import io.devflow.sourcefiles.enums.SourceFileType;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "source_files")
+@Table(
+        name = "source_files",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_source_files_branch_path",
+                columnNames = {"branch_id", "path"}
+        ),
+        indexes = {
+                @Index(name = "idx_source_files_repository", columnList = "repository_id"),
+                @Index(name = "idx_source_files_parent", columnList = "parent_id")
+        }
+)
 public class SourceFile extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "repository_id", nullable = false)
-    private Repository repository;
+    @Column(name = "repository_id", nullable = false)
+    private UUID repositoryId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
+    @Column(name = "branch_id", nullable = false)
+    private UUID branchId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    private SourceFile parent;
+    @Column(name = "parent_id")
+    private UUID parentId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "file_type", nullable = false, length = 20)
@@ -53,20 +58,21 @@ public class SourceFile extends BaseEntity {
     @Column(name = "size_bytes", nullable = false)
     private long sizeBytes;
 
-    @Column(name = "content_text", columnDefinition = "TEXT")
-    private String contentText;
+    @Column(name = "blob_hash", length = 80)
+    private String blobHash;
 
     @Column(name = "content_sha256", length = 64)
     private String contentSha256;
 
+    @Column(name = "object_storage_key", columnDefinition = "TEXT")
+    private String objectStorageKey;
+
     @Column(name = "is_binary", nullable = false)
     private boolean binary;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_id")
-    private User createdBy;
+    @Column(name = "created_by_id")
+    private UUID createdById;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "updated_by_id")
-    private User updatedBy;
+    @Column(name = "updated_by_id")
+    private UUID updatedById;
 }

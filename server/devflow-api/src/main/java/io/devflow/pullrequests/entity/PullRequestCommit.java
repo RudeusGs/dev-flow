@@ -1,33 +1,32 @@
 package io.devflow.pullrequests.entity;
 
-import io.devflow.commits.entity.Commit;
-import io.devflow.pullrequests.entity.id.PullRequestCommitId;
-import jakarta.persistence.EmbeddedId;
+import io.devflow.common.entity.UuidEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "pull_request_commits")
-public class PullRequestCommit {
+@Table(
+        name = "pull_request_commits",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_pull_request_commits_pull_request_commit",
+                columnNames = {"pull_request_id", "commit_id"}
+        ),
+        indexes = @Index(name = "idx_pull_request_commits_commit", columnList = "commit_id")
+)
+public class PullRequestCommit extends UuidEntity {
 
-    @EmbeddedId
-    private PullRequestCommitId id = new PullRequestCommitId();
+    @Column(name = "pull_request_id", nullable = false)
+    private UUID pullRequestId;
 
-    @MapsId("pullRequestId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pull_request_id", nullable = false)
-    private PullRequest pullRequest;
-
-    @MapsId("commitId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "commit_id", nullable = false)
-    private Commit commit;
+    @Column(name = "commit_id", nullable = false)
+    private UUID commitId;
 }

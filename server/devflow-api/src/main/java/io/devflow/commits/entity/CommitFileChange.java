@@ -2,31 +2,38 @@ package io.devflow.commits.entity;
 
 import io.devflow.commits.enums.FileChangeType;
 import io.devflow.common.entity.CreatedEntity;
-import io.devflow.sourcefiles.entity.SourceFile;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 @Entity
-@Table(name = "commit_file_changes")
+@Table(
+        name = "commit_file_changes",
+        indexes = {
+                @Index(name = "idx_commit_file_changes_repository", columnList = "repository_id"),
+                @Index(name = "idx_commit_file_changes_commit", columnList = "commit_id"),
+                @Index(name = "idx_commit_file_changes_source_file", columnList = "source_file_id")
+        }
+)
 public class CommitFileChange extends CreatedEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "commit_id", nullable = false)
-    private Commit commit;
+    @Column(name = "repository_id", nullable = false)
+    private UUID repositoryId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_file_id")
-    private SourceFile sourceFile;
+    @Column(name = "commit_id", nullable = false)
+    private UUID commitId;
+
+    @Column(name = "source_file_id")
+    private UUID sourceFileId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "change_type", nullable = false, length = 20)
@@ -37,6 +44,18 @@ public class CommitFileChange extends CreatedEntity {
 
     @Column(name = "new_path", columnDefinition = "TEXT")
     private String newPath;
+
+    @Column(name = "old_file_mode", length = 20)
+    private String oldFileMode;
+
+    @Column(name = "new_file_mode", length = 20)
+    private String newFileMode;
+
+    @Column(name = "old_blob_hash", length = 80)
+    private String oldBlobHash;
+
+    @Column(name = "new_blob_hash", length = 80)
+    private String newBlobHash;
 
     @Column(name = "old_content_sha256", length = 64)
     private String oldContentSha256;
@@ -50,6 +69,9 @@ public class CommitFileChange extends CreatedEntity {
     @Column(name = "deletions", nullable = false)
     private int deletions;
 
-    @Column(name = "patch_text", columnDefinition = "TEXT")
-    private String patchText;
+    @Column(name = "diff_hunk_count", nullable = false)
+    private int diffHunkCount;
+
+    @Column(name = "patch_storage_key", columnDefinition = "TEXT")
+    private String patchStorageKey;
 }

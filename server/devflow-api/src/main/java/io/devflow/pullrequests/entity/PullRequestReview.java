@@ -2,34 +2,36 @@ package io.devflow.pullrequests.entity;
 
 import io.devflow.common.entity.UuidEntity;
 import io.devflow.pullrequests.enums.PullRequestReviewStatus;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "pull_request_reviews")
+@Table(
+        name = "pull_request_reviews",
+        indexes = {
+                @Index(name = "idx_pull_request_reviews_pull_request", columnList = "pull_request_id"),
+                @Index(name = "idx_pull_request_reviews_reviewer", columnList = "reviewer_id")
+        }
+)
 public class PullRequestReview extends UuidEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pull_request_id", nullable = false)
-    private PullRequest pullRequest;
+    @Column(name = "pull_request_id", nullable = false)
+    private UUID pullRequestId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "reviewer_id", nullable = false)
-    private User reviewer;
+    @Column(name = "reviewer_id", nullable = false)
+    private UUID reviewerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
@@ -41,9 +43,8 @@ public class PullRequestReview extends UuidEntity {
     @Column(name = "submitted_at", nullable = false, updatable = false)
     private Instant submittedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dismissed_by_id")
-    private User dismissedBy;
+    @Column(name = "dismissed_by_id")
+    private UUID dismissedById;
 
     @Column(name = "dismissed_at")
     private Instant dismissedAt;
@@ -58,8 +59,8 @@ public class PullRequestReview extends UuidEntity {
         }
     }
 
-    public void dismiss(User user, String reason) {
-        dismissedBy = user;
+    public void dismiss(UUID dismissedById, String reason) {
+        this.dismissedById = dismissedById;
         dismissReason = reason;
         dismissedAt = Instant.now();
     }
