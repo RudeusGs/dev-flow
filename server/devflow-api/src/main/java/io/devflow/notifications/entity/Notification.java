@@ -1,15 +1,9 @@
 package io.devflow.notifications.entity;
 
 import io.devflow.common.entity.CreatedEntity;
-import io.devflow.issues.entity.Issue;
-import io.devflow.pullrequests.entity.PullRequest;
-import io.devflow.repos.entity.Repository;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,32 +13,34 @@ import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "notifications")
+@Table(
+        name = "notifications",
+        indexes = {
+                @Index(name = "idx_notifications_recipient_read", columnList = "recipient_id, is_read"),
+                @Index(name = "idx_notifications_repository", columnList = "repository_id")
+        }
+)
 public class Notification extends CreatedEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "recipient_id", nullable = false)
-    private User recipient;
+    @Column(name = "recipient_id", nullable = false)
+    private UUID recipientId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "actor_id")
-    private User actor;
+    @Column(name = "actor_id")
+    private UUID actorId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "repository_id")
-    private Repository repository;
+    @Column(name = "repository_id")
+    private UUID repositoryId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "issue_id")
-    private Issue issue;
+    @Column(name = "issue_id")
+    private UUID issueId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pull_request_id")
-    private PullRequest pullRequest;
+    @Column(name = "pull_request_id")
+    private UUID pullRequestId;
 
     @Column(name = "type", nullable = false, length = 80)
     private String type;

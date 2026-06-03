@@ -1,13 +1,11 @@
 package io.devflow.reactions.entity;
 
 import io.devflow.common.entity.CreatedEntity;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,12 +14,18 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "reactions")
+@Table(
+        name = "reactions",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_reactions_user_target_emoji",
+                columnNames = {"user_id", "target_type", "target_id", "emoji"}
+        ),
+        indexes = @Index(name = "idx_reactions_target", columnList = "target_type, target_id")
+)
 public class Reaction extends CreatedEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
     @Column(name = "target_type", nullable = false, length = 80)
     private String targetType;

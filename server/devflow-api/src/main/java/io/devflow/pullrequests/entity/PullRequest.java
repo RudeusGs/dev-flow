@@ -1,40 +1,48 @@
 package io.devflow.pullrequests.entity;
 
-import io.devflow.branches.entity.Branch;
-import io.devflow.commits.entity.Commit;
 import io.devflow.common.entity.BaseEntity;
 import io.devflow.pullrequests.enums.PullRequestStatus;
-import io.devflow.repos.entity.Repository;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "pull_requests")
+@Table(
+        name = "pull_requests",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_pull_requests_repository_number",
+                columnNames = {"repository_id", "pull_request_number"}
+        ),
+        indexes = {
+                @Index(name = "idx_pull_requests_repository_status", columnList = "repository_id, status"),
+                @Index(name = "idx_pull_requests_author", columnList = "author_id"),
+                @Index(name = "idx_pull_requests_milestone", columnList = "milestone_id")
+        }
+)
 public class PullRequest extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "repository_id", nullable = false)
-    private Repository repository;
+    @Column(name = "repository_id", nullable = false)
+    private UUID repositoryId;
 
     @Column(name = "pull_request_number", nullable = false)
     private int pullRequestNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
-    private User author;
+    @Column(name = "author_id")
+    private UUID authorId;
+
+    @Column(name = "milestone_id")
+    private UUID milestoneId;
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
@@ -46,42 +54,37 @@ public class PullRequest extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private PullRequestStatus status = PullRequestStatus.OPEN;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_branch_id", nullable = false)
-    private Branch sourceBranch;
+    @Column(name = "source_branch_id", nullable = false)
+    private UUID sourceBranchId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "target_branch_id", nullable = false)
-    private Branch targetBranch;
+    @Column(name = "target_branch_id", nullable = false)
+    private UUID targetBranchId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "merge_commit_id")
-    private Commit mergeCommit;
+    @Column(name = "merge_commit_id")
+    private UUID mergeCommitId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "merged_by_id")
-    private User mergedBy;
+    @Column(name = "merged_by_id")
+    private UUID mergedById;
 
     @Column(name = "merged_at")
     private Instant mergedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "closed_by_id")
-    private User closedBy;
+    @Column(name = "closed_by_id")
+    private UUID closedById;
 
     @Column(name = "closed_at")
     private Instant closedAt;
 
-    public void merge(User user, Commit commit) {
+    public void merge(UUID mergedById, UUID mergeCommitId) {
         status = PullRequestStatus.MERGED;
-        mergedBy = user;
-        mergeCommit = commit;
+        this.mergedById = mergedById;
+        this.mergeCommitId = mergeCommitId;
         mergedAt = Instant.now();
     }
 
-    public void close(User user) {
+    public void close(UUID closedById) {
         status = PullRequestStatus.CLOSED;
-        closedBy = user;
+        this.closedById = closedById;
         closedAt = Instant.now();
     }
 }

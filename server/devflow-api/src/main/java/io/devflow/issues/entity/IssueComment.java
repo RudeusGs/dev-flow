@@ -1,35 +1,36 @@
 package io.devflow.issues.entity;
 
 import io.devflow.common.entity.BaseEntity;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "issue_comments")
+@Table(
+        name = "issue_comments",
+        indexes = {
+                @Index(name = "idx_issue_comments_issue", columnList = "issue_id"),
+                @Index(name = "idx_issue_comments_author", columnList = "author_id")
+        }
+)
 public class IssueComment extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "issue_id", nullable = false)
-    private Issue issue;
+    @Column(name = "issue_id", nullable = false)
+    private UUID issueId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
-    private User author;
+    @Column(name = "author_id")
+    private UUID authorId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_comment_id")
-    private IssueComment parentComment;
+    @Column(name = "parent_comment_id")
+    private UUID parentCommentId;
 
     @Column(name = "body", nullable = false, columnDefinition = "TEXT")
     private String body;

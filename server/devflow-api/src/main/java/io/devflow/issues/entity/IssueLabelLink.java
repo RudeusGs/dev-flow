@@ -1,32 +1,32 @@
 package io.devflow.issues.entity;
 
-import io.devflow.issues.entity.id.IssueLabelLinkId;
-import jakarta.persistence.EmbeddedId;
+import io.devflow.common.entity.UuidEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "issue_label_links")
-public class IssueLabelLink {
+@Table(
+        name = "issue_label_links",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_issue_label_links_issue_label",
+                columnNames = {"issue_id", "label_id"}
+        ),
+        indexes = @Index(name = "idx_issue_label_links_label", columnList = "label_id")
+)
+public class IssueLabelLink extends UuidEntity {
 
-    @EmbeddedId
-    private IssueLabelLinkId id = new IssueLabelLinkId();
+    @Column(name = "issue_id", nullable = false)
+    private UUID issueId;
 
-    @MapsId("issueId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "issue_id", nullable = false)
-    private Issue issue;
-
-    @MapsId("labelId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "label_id", nullable = false)
-    private IssueLabel label;
+    @Column(name = "label_id", nullable = false)
+    private UUID labelId;
 }

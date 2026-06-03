@@ -1,42 +1,41 @@
 package io.devflow.branches.entity;
 
-import io.devflow.commits.entity.Commit;
 import io.devflow.common.entity.BaseEntity;
-import io.devflow.repos.entity.Repository;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "branches")
+@Table(
+        name = "branches",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_branches_repository_name",
+                columnNames = {"repository_id", "name"}
+        )
+)
 public class Branch extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "repository_id", nullable = false)
-    private Repository repository;
+    @Column(name = "repository_id", nullable = false)
+    private UUID repositoryId;
 
     @Column(name = "name", nullable = false, length = 120)
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_from_branch_id")
-    private Branch createdFromBranch;
+    @Column(name = "created_from_branch_id")
+    private UUID createdFromBranchId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "head_commit_id")
-    private Commit headCommit;
+    @Column(name = "head_commit_id")
+    private UUID headCommitId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_id")
-    private User createdBy;
+    @Column(name = "created_by_id")
+    private UUID createdById;
 
     @Column(name = "is_default", nullable = false)
     private boolean defaultBranch;

@@ -2,37 +2,47 @@ package io.devflow.issues.entity;
 
 import io.devflow.common.entity.BaseEntity;
 import io.devflow.issues.enums.IssueStatus;
-import io.devflow.repos.entity.Repository;
-import io.devflow.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "issues")
+@Table(
+        name = "issues",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_issues_repository_number",
+                columnNames = {"repository_id", "issue_number"}
+        ),
+        indexes = {
+                @Index(name = "idx_issues_repository_status", columnList = "repository_id, status"),
+                @Index(name = "idx_issues_author", columnList = "author_id"),
+                @Index(name = "idx_issues_milestone", columnList = "milestone_id")
+        }
+)
 public class Issue extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "repository_id", nullable = false)
-    private Repository repository;
+    @Column(name = "repository_id", nullable = false)
+    private UUID repositoryId;
 
     @Column(name = "issue_number", nullable = false)
     private int issueNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
-    private User author;
+    @Column(name = "author_id")
+    private UUID authorId;
+
+    @Column(name = "milestone_id")
+    private UUID milestoneId;
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
@@ -47,23 +57,22 @@ public class Issue extends BaseEntity {
     @Column(name = "state_reason", length = 50)
     private String stateReason;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "closed_by_id")
-    private User closedBy;
+    @Column(name = "closed_by_id")
+    private UUID closedById;
 
     @Column(name = "closed_at")
     private Instant closedAt;
 
-    public void close(User user, String reason) {
+    public void close(UUID closedById, String reason) {
         status = IssueStatus.CLOSED;
-        closedBy = user;
+        this.closedById = closedById;
         stateReason = reason;
         closedAt = Instant.now();
     }
 
     public void reopen() {
         status = IssueStatus.OPEN;
-        closedBy = null;
+        closedById = null;
         stateReason = null;
         closedAt = null;
     }

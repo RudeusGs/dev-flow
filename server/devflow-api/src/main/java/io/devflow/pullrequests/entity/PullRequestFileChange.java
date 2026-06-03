@@ -2,31 +2,31 @@ package io.devflow.pullrequests.entity;
 
 import io.devflow.commits.enums.FileChangeType;
 import io.devflow.common.entity.CreatedEntity;
-import io.devflow.sourcefiles.entity.SourceFile;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 @Entity
-@Table(name = "pull_request_file_changes")
+@Table(
+        name = "pull_request_file_changes",
+        indexes = @Index(name = "idx_pull_request_file_changes_pull_request", columnList = "pull_request_id")
+)
 public class PullRequestFileChange extends CreatedEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pull_request_id", nullable = false)
-    private PullRequest pullRequest;
+    @Column(name = "pull_request_id", nullable = false)
+    private UUID pullRequestId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_file_id")
-    private SourceFile sourceFile;
+    @Column(name = "source_file_id")
+    private UUID sourceFileId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "change_type", nullable = false, length = 20)

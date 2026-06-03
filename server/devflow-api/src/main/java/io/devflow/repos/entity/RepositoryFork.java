@@ -1,30 +1,35 @@
 package io.devflow.repos.entity;
 
 import io.devflow.common.entity.CreatedEntity;
-import io.devflow.users.entity.User;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "repository_forks")
+@Table(
+        name = "repository_forks",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_repository_forks_source_fork",
+                columnNames = {"source_repository_id", "fork_repository_id"}
+        ),
+        indexes = @Index(name = "idx_repository_forks_forked_by", columnList = "forked_by_id")
+)
 public class RepositoryFork extends CreatedEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_repository_id", nullable = false)
-    private Repository sourceRepository;
+    @Column(name = "source_repository_id", nullable = false)
+    private UUID sourceRepositoryId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "fork_repository_id", nullable = false)
-    private Repository forkRepository;
+    @Column(name = "fork_repository_id", nullable = false)
+    private UUID forkRepositoryId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "forked_by_id", nullable = false)
-    private User forkedBy;
+    @Column(name = "forked_by_id", nullable = false)
+    private UUID forkedById;
 }
