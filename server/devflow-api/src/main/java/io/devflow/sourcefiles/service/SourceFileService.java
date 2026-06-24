@@ -26,17 +26,20 @@ public class SourceFileService {
     private final RepositoryRepository repositoryRepository;
     private final UserRepository userRepository;
     private final RepositoryPermissionService permissionService;
+    private final io.devflow.repos.service.GitManagerService gitManagerService;
 
     public SourceFileService(SourceFileRepository sourceFileRepository,
                              BranchRepository branchRepository,
                              RepositoryRepository repositoryRepository,
                              UserRepository userRepository,
-                             RepositoryPermissionService permissionService) {
+                             RepositoryPermissionService permissionService,
+                             io.devflow.repos.service.GitManagerService gitManagerService) {
         this.sourceFileRepository = sourceFileRepository;
         this.branchRepository = branchRepository;
         this.repositoryRepository = repositoryRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
+        this.gitManagerService = gitManagerService;
     }
 
     @Transactional(readOnly = true)
@@ -49,6 +52,12 @@ public class SourceFileService {
 
         permissionService.checkReadPermission(currentUserId, repo);
 
+        List<SourceFileDto> jgitFiles = gitManagerService.listFiles(ownerUsername, repoName, branchName, path);
+        if (!jgitFiles.isEmpty()) {
+            return jgitFiles;
+        }
+
+        // Fallback to database for empty repo or mock data
         Branch branch = branchRepository.findByRepositoryIdAndName(repo.getId(), branchName)
                 .orElseThrow(() -> new ResourceNotFoundException("Branch not found: " + branchName));
 

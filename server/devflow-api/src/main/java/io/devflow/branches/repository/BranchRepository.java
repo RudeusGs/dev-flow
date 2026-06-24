@@ -14,4 +14,5 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     List<Branch> findByRepositoryId(UUID repositoryId);
     boolean existsByRepositoryIdAndName(UUID repositoryId, String name);
     Optional<Branch> findByRepositoryIdAndDefaultBranchTrue(UUID repositoryId);
+    List<Branch> findByIdIn(java.util.Collection<UUID> ids);
 }

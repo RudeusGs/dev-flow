@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.UUID;
 
@@ -20,9 +21,11 @@ import java.util.UUID;
 public class CommitController {
 
     private final CommitService commitService;
+    private final io.devflow.security.SecurityUtils securityUtils;
 
-    public CommitController(CommitService commitService) {
+    public CommitController(CommitService commitService, io.devflow.security.SecurityUtils securityUtils) {
         this.commitService = commitService;
+        this.securityUtils = securityUtils;
     }
 
     @PostMapping
@@ -33,5 +36,14 @@ public class CommitController {
             @Valid @RequestBody CreateCommitRequest request) {
         CommitDto commitDto = commitService.createCommit(userId, ownerUsername, repoName, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(commitDto);
+    }
+
+    @GetMapping
+    public ResponseEntity<org.springframework.data.domain.Page<CommitDto>> listCommits(
+            @PathVariable String ownerUsername,
+            @PathVariable String repoName,
+            org.springframework.data.domain.Pageable pageable) {
+        UUID currentUserId = securityUtils.getCurrentUserId().orElse(null);
+        return ResponseEntity.ok(commitService.listCommits(currentUserId, ownerUsername, repoName, pageable));
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -62,6 +63,15 @@ public class RepositoryController {
         return ResponseEntity.ok(repositoryService.getRepository(ownerUsername, repoName, currentUserId));
     }
 
+    @PatchMapping("/{ownerUsername}/{repoName}")
+    public ResponseEntity<RepositoryResponse> updateRepository(
+            @CurrentUser UUID userId,
+            @PathVariable String ownerUsername,
+            @PathVariable String repoName,
+            @Valid @RequestBody io.devflow.repos.dto.UpdateRepositoryRequest request) {
+        return ResponseEntity.ok(repositoryService.updateRepository(userId, ownerUsername, repoName, request));
+    }
+
     @DeleteMapping("/{ownerUsername}/{repoName}")
     public ResponseEntity<Void> deleteRepository(
             @CurrentUser UUID userId,
@@ -86,6 +96,34 @@ public class RepositoryController {
             @PathVariable String ownerUsername,
             @PathVariable String repoName) {
         repositoryService.unstarRepository(userId, ownerUsername, repoName);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{ownerUsername}/{repoName}/forks")
+    public ResponseEntity<RepositoryResponse> forkRepository(
+            @CurrentUser UUID userId,
+            @PathVariable String ownerUsername,
+            @PathVariable String repoName) {
+        RepositoryResponse response = repositoryService.forkRepository(userId, ownerUsername, repoName);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{ownerUsername}/{repoName}/watch")
+    public ResponseEntity<Void> watchRepository(
+            @CurrentUser UUID userId,
+            @PathVariable String ownerUsername,
+            @PathVariable String repoName,
+            @Valid @RequestBody io.devflow.repos.dto.WatchRepositoryRequest request) {
+        repositoryService.watchRepository(userId, ownerUsername, repoName, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{ownerUsername}/{repoName}/watch")
+    public ResponseEntity<Void> unwatchRepository(
+            @CurrentUser UUID userId,
+            @PathVariable String ownerUsername,
+            @PathVariable String repoName) {
+        repositoryService.unwatchRepository(userId, ownerUsername, repoName);
         return ResponseEntity.noContent().build();
     }
 }

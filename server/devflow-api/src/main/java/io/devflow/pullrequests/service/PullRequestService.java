@@ -82,7 +82,7 @@ public class PullRequestService {
         pr.setStatus(PullRequestStatus.OPEN);
 
         PullRequest saved = pullRequestRepository.save(pr);
-        return mapToDto(saved, sourceBranch.getName(), targetBranch.getName());
+        return mapToDtoWithLookup(saved, sourceBranch.getName(), targetBranch.getName());
     }
 
     @Transactional(readOnly = true)
@@ -96,10 +96,24 @@ public class PullRequestService {
             prs = pullRequestRepository.findByRepositoryId(repo.getId(), pageable);
         }
 
+        java.util.Set<UUID> authorIds = prs.stream().map(PullRequest::getAuthorId).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+        java.util.Map<UUID, String> authorUsernames = userRepository.findByIdIn(authorIds).stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getUsername));
+
+        java.util.Set<UUID> branchIds = new java.util.HashSet<>();
+        prs.forEach(pr -> {
+            branchIds.add(pr.getSourceBranchId());
+            branchIds.add(pr.getTargetBranchId());
+        });
+        
+        java.util.Map<UUID, String> branchNames = branchRepository.findByIdIn(branchIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Branch::getId, Branch::getName));
+
         return prs.map(pr -> {
-            Branch source = branchRepository.findById(pr.getSourceBranchId()).orElse(null);
-            Branch target = branchRepository.findById(pr.getTargetBranchId()).orElse(null);
-            return mapToDto(pr, source != null ? source.getName() : "unknown", target != null ? target.getName() : "unknown");
+            String authorUsername = authorUsernames.getOrDefault(pr.getAuthorId(), "unknown");
+            String source = branchNames.getOrDefault(pr.getSourceBranchId(), "unknown");
+            String target = branchNames.getOrDefault(pr.getTargetBranchId(), "unknown");
+            return mapToDto(pr, source, target, authorUsername);
         });
     }
 
@@ -113,7 +127,7 @@ public class PullRequestService {
         Branch source = branchRepository.findById(pr.getSourceBranchId()).orElse(null);
         Branch target = branchRepository.findById(pr.getTargetBranchId()).orElse(null);
 
-        return mapToDto(pr, source != null ? source.getName() : "unknown", target != null ? target.getName() : "unknown");
+        return mapToDtoWithLookup(pr, source != null ? source.getName() : "unknown", target != null ? target.getName() : "unknown");
     }
 
     @Transactional
@@ -155,7 +169,7 @@ public class PullRequestService {
         pr.merge(currentUserId, savedCommit.getId());
         PullRequest savedPr = pullRequestRepository.save(pr);
 
-        return mapToDto(savedPr, source.getName(), target.getName());
+        return mapToDtoWithLookup(savedPr, source.getName(), target.getName());
     }
 
     private Repository getRepositoryAndCheckReadAccess(UUID currentUserId, String ownerUsername, String repoName) {
@@ -169,13 +183,17 @@ public class PullRequestService {
         return repo;
     }
 
-    private PullRequestDto mapToDto(PullRequest pr, String sourceBranchName, String targetBranchName) {
+    private PullRequestDto mapToDtoWithLookup(PullRequest pr, String sourceBranchName, String targetBranchName) {
         String authorUsername = "unknown";
         if (pr.getAuthorId() != null) {
             authorUsername = userRepository.findById(pr.getAuthorId())
                     .map(User::getUsername)
                     .orElse("unknown");
         }
+        return mapToDto(pr, sourceBranchName, targetBranchName, authorUsername);
+    }
+
+    private PullRequestDto mapToDto(PullRequest pr, String sourceBranchName, String targetBranchName, String authorUsername) {
 
         return PullRequestDto.builder()
                 .id(pr.getId().toString())

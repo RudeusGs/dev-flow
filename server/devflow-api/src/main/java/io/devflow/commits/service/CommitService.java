@@ -30,19 +30,22 @@ public class CommitService {
     private final UserRepository userRepository;
     private final RepositoryPermissionService permissionService;
     private final SourceFileRepository sourceFileRepository;
+    private final io.devflow.repos.service.GitManagerService gitManagerService;
 
     public CommitService(CommitRepository commitRepository,
                          BranchRepository branchRepository,
                          RepositoryRepository repositoryRepository,
                          UserRepository userRepository,
                          RepositoryPermissionService permissionService,
-                         SourceFileRepository sourceFileRepository) {
+                         SourceFileRepository sourceFileRepository,
+                         io.devflow.repos.service.GitManagerService gitManagerService) {
         this.commitRepository = commitRepository;
         this.branchRepository = branchRepository;
         this.repositoryRepository = repositoryRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.sourceFileRepository = sourceFileRepository;
+        this.gitManagerService = gitManagerService;
     }
 
     @Transactional
@@ -99,6 +102,27 @@ public class CommitService {
         }
 
         return mapToDto(savedCommit);
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<CommitDto> listCommits(UUID currentUserId, String ownerUsername, String repoName, org.springframework.data.domain.Pageable pageable) {
+        User owner = userRepository.findByUsername(ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
+
+        Repository repo = repositoryRepository.findByOwnerIdAndSlug(owner.getId(), repoName.toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
+
+        permissionService.checkReadPermission(currentUserId, repo);
+
+        // Limit the number of commits fetched from JGit to 50 for now
+        java.util.List<CommitDto> jgitCommits = gitManagerService.listCommits(ownerUsername, repoName, null, 50);
+
+        if (!jgitCommits.isEmpty()) {
+            return new org.springframework.data.domain.PageImpl<>(jgitCommits, pageable, jgitCommits.size());
+        }
+
+        // Fallback to DB (Mock data) if JGit repo is empty or doesn't exist
+        return commitRepository.findByRepositoryIdOrderByCommittedAtDesc(repo.getId(), pageable).map(this::mapToDto);
     }
 
     private String getFileNameFromPath(String path) {

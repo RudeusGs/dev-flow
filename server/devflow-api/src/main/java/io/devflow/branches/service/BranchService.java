@@ -25,20 +25,30 @@ public class BranchService {
     private final RepositoryRepository repositoryRepository;
     private final UserRepository userRepository;
     private final RepositoryPermissionService permissionService;
+    private final io.devflow.repos.service.GitManagerService gitManagerService;
 
     public BranchService(BranchRepository branchRepository,
                          RepositoryRepository repositoryRepository,
                          UserRepository userRepository,
-                         RepositoryPermissionService permissionService) {
+                         RepositoryPermissionService permissionService,
+                         io.devflow.repos.service.GitManagerService gitManagerService) {
         this.branchRepository = branchRepository;
         this.repositoryRepository = repositoryRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
+        this.gitManagerService = gitManagerService;
     }
 
     @Transactional(readOnly = true)
     public List<BranchDto> listBranches(UUID currentUserId, String ownerUsername, String repoName) {
         Repository repo = getRepositoryAndCheckReadAccess(currentUserId, ownerUsername, repoName);
+
+        List<BranchDto> jgitBranches = gitManagerService.listBranches(ownerUsername, repoName, repo.getDefaultBranchName());
+        if (!jgitBranches.isEmpty()) {
+            // Merge with DB data if necessary, or just return JGit data
+            return jgitBranches;
+        }
+
         return branchRepository.findByRepositoryId(repo.getId()).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());

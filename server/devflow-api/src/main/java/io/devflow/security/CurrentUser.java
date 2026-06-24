@@ -11,6 +11,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.PARAMETER, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@AuthenticationPrincipal
+@AuthenticationPrincipal(expression = "id")
 public @interface CurrentUser {
 }
