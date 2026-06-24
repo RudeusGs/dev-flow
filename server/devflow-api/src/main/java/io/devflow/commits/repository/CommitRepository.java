@@ -13,4 +13,5 @@ import java.util.UUID;
 public interface CommitRepository extends JpaRepository<Commit, UUID> {
     Optional<Commit> findByRepositoryIdAndCommitHash(UUID repositoryId, String commitHash);
     Page<Commit> findByRepositoryId(UUID repositoryId, Pageable pageable);
+    Page<Commit> findByRepositoryIdOrderByCommittedAtDesc(UUID repositoryId, Pageable pageable);
 }

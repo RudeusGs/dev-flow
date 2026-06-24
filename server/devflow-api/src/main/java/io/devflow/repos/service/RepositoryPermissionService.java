@@ -44,6 +44,12 @@ public class RepositoryPermissionService {
         }
     }
 
+    public void checkWritePermission(UUID userId, Repository repository) {
+        if (!canWrite(userId, repository)) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not have write access to this repository");
+        }
+    }
+
     public boolean canWrite(UUID userId, Repository repository) {
         if (userId == null) {
             return false;

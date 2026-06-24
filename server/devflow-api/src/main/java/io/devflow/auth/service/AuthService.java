@@ -96,7 +96,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse refreshToken(String requestRefreshToken) {
-        return refreshTokenRepository.findByTokenHash(requestRefreshToken)
+        return refreshTokenRepository.findByTokenHash(hashToken(requestRefreshToken))
                 .map(this::verifyExpiration)
                 .map(RefreshToken::getUserId)
                 .map(userId -> {
@@ -112,7 +112,7 @@ public class AuthService {
 
     @Transactional
     public void logout(String requestRefreshToken) {
-        refreshTokenRepository.findByTokenHash(requestRefreshToken)
+        refreshTokenRepository.findByTokenHash(hashToken(requestRefreshToken))
                 .ifPresent(token -> {
                     token.revoke();
                     refreshTokenRepository.save(token);
@@ -121,19 +121,30 @@ public class AuthService {
 
     private AuthResponse generateAuthResponse(Authentication authentication, User user) {
         String jwt = tokenProvider.generateToken(authentication);
-        RefreshToken refreshToken = createRefreshToken(user.getId());
+        String rawRefreshToken = UUID.randomUUID().toString();
+        createRefreshToken(user.getId(), rawRefreshToken);
         
-        return createAuthResponse(jwt, refreshToken.getTokenHash(), user);
+        return createAuthResponse(jwt, rawRefreshToken, user);
     }
 
-    private RefreshToken createRefreshToken(UUID userId) {
+    private void createRefreshToken(UUID userId, String rawToken) {
         RefreshToken refreshToken = new RefreshToken();
         
         refreshToken.setUserId(userId);
         refreshToken.setExpiresAt(Instant.now().plus(refreshTokenDurationMs, ChronoUnit.MILLIS));
-        refreshToken.setTokenHash(UUID.randomUUID().toString());
+        refreshToken.setTokenHash(hashToken(rawToken));
         
-        return refreshTokenRepository.save(refreshToken);
+        refreshTokenRepository.save(refreshToken);
+    }
+
+    private String hashToken(String token) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.Base64.getEncoder().encodeToString(hash);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error hashing token", e);
+        }
     }
 
     private RefreshToken verifyExpiration(RefreshToken token) {

@@ -30,17 +30,23 @@ public class RepositoryService {
     private final RepositoryStarRepository repositoryStarRepository;
     private final RepositoryWatchRepository repositoryWatchRepository;
     private final RepositoryPermissionService permissionService;
+    private final io.devflow.repos.repository.RepositoryForkRepository repositoryForkRepository;
+    private final GitManagerService gitManagerService;
 
     public RepositoryService(RepositoryRepository repositoryRepository,
                              UserRepository userRepository,
                              RepositoryStarRepository repositoryStarRepository,
                              RepositoryWatchRepository repositoryWatchRepository,
-                             RepositoryPermissionService permissionService) {
+                             RepositoryPermissionService permissionService,
+                             io.devflow.repos.repository.RepositoryForkRepository repositoryForkRepository,
+                             GitManagerService gitManagerService) {
         this.repositoryRepository = repositoryRepository;
         this.userRepository = userRepository;
         this.repositoryStarRepository = repositoryStarRepository;
         this.repositoryWatchRepository = repositoryWatchRepository;
         this.permissionService = permissionService;
+        this.repositoryForkRepository = repositoryForkRepository;
+        this.gitManagerService = gitManagerService;
     }
 
     @Transactional
@@ -64,7 +70,45 @@ public class RepositoryService {
         
         Repository savedRepo = repositoryRepository.save(repo);
 
+        // Initialize physical bare Git repository
+        gitManagerService.initBareRepository(owner.getUsername(), savedRepo.getSlug());
+
         return mapToResponse(savedRepo, owner.getUsername());
+    }
+
+    @Transactional
+    public RepositoryResponse updateRepository(UUID userId, String ownerUsername, String repoName, io.devflow.repos.dto.UpdateRepositoryRequest request) {
+        User owner = userRepository.findByUsername(ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
+
+        Repository repo = repositoryRepository.findByOwnerIdAndSlug(owner.getId(), repoName.toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
+
+        permissionService.checkWritePermission(userId, repo);
+
+        if (request.getName() != null && !request.getName().equalsIgnoreCase(repo.getName())) {
+            String newSlug = request.getName().toLowerCase();
+            if (repositoryRepository.existsByOwnerIdAndSlug(owner.getId(), newSlug)) {
+                throw new DuplicateResourceException("Repository with this name already exists for this owner");
+            }
+            repo.setName(request.getName());
+            repo.setSlug(newSlug);
+        }
+
+        if (request.getDescription() != null) {
+            repo.setDescription(request.getDescription());
+        }
+
+        if (request.getVisibility() != null) {
+            repo.setVisibility(request.getVisibility());
+        }
+
+        if (request.getDefaultBranch() != null) {
+            repo.setDefaultBranchName(request.getDefaultBranch());
+        }
+
+        Repository savedRepo = repositoryRepository.save(repo);
+        return mapToResponse(savedRepo, ownerUsername);
     }
 
     @Transactional(readOnly = true)
@@ -82,8 +126,20 @@ public class RepositoryService {
 
     @Transactional(readOnly = true)
     public Page<RepositoryResponse> listPublicRepositories(Pageable pageable) {
-        return repositoryRepository.findByOwnerTypeAndVisibility(RepositoryOwnerType.USER, RepositoryVisibility.PUBLIC, pageable)
-                .map(this::mapToResponseWithLookup);
+        Page<Repository> repos = repositoryRepository.findByOwnerTypeAndVisibility(RepositoryOwnerType.USER, RepositoryVisibility.PUBLIC, pageable);
+        
+        java.util.Set<UUID> ownerIds = repos.stream()
+                .filter(r -> r.getOwnerType() == RepositoryOwnerType.USER)
+                .map(Repository::getOwnerId)
+                .collect(java.util.stream.Collectors.toSet());
+                
+        java.util.Map<UUID, String> ownerUsernames = userRepository.findByIdIn(ownerIds).stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, User::getUsername));
+                
+        return repos.map(repo -> {
+            String ownerUsername = ownerUsernames.getOrDefault(repo.getOwnerId(), "unknown");
+            return mapToResponse(repo, ownerUsername);
+        });
     }
     
     @Transactional(readOnly = true)
@@ -91,14 +147,16 @@ public class RepositoryService {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Page<Repository> repos = repositoryRepository.findByOwnerId(owner.getId(), pageable);
+        Page<Repository> repos;
+        if (currentUserId.isPresent() && owner.getId().equals(currentUserId.get())) {
+            repos = repositoryRepository.findByOwnerId(owner.getId(), pageable);
+        } else if (currentUserId.isPresent()) {
+            repos = repositoryRepository.findUserVisibleRepositories(owner.getId(), currentUserId.get(), pageable);
+        } else {
+            repos = repositoryRepository.findUserPublicRepositories(owner.getId(), pageable);
+        }
         
-        java.util.List<RepositoryResponse> filteredRepos = repos.stream()
-                .filter(repo -> permissionService.canRead(currentUserId.orElse(null), repo))
-                .map(repo -> mapToResponse(repo, owner.getUsername()))
-                .collect(java.util.stream.Collectors.toList());
-                
-        return new org.springframework.data.domain.PageImpl<>(filteredRepos, pageable, repos.getTotalElements());
+        return repos.map(repo -> mapToResponse(repo, owner.getUsername()));
     }
 
     @Transactional
@@ -117,8 +175,7 @@ public class RepositoryService {
             star.setUserId(userId);
             repositoryStarRepository.save(star);
             
-            repo.setStarsCount(repo.getStarsCount() + 1);
-            repositoryRepository.save(repo);
+            repositoryRepository.incrementStarsCount(repo.getId());
         }
     }
 
@@ -133,9 +190,40 @@ public class RepositoryService {
         repositoryStarRepository.findByRepositoryIdAndUserId(repo.getId(), userId)
                 .ifPresent(star -> {
                     repositoryStarRepository.delete(star);
-                    repo.setStarsCount(repo.getStarsCount() - 1);
-                    repositoryRepository.save(repo);
+                    repositoryRepository.decrementStarsCount(repo.getId());
                 });
+    }
+
+    @Transactional
+    public void watchRepository(UUID userId, String ownerUsername, String repoName, io.devflow.repos.dto.WatchRepositoryRequest request) {
+        User owner = userRepository.findByUsername(ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
+
+        Repository repo = repositoryRepository.findByOwnerIdAndSlug(owner.getId(), repoName.toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
+
+        permissionService.checkReadPermission(userId, repo);
+
+        RepositoryWatch watch = repositoryWatchRepository.findByRepositoryIdAndUserId(repo.getId(), userId)
+                .orElse(new RepositoryWatch());
+                
+        watch.setRepositoryId(repo.getId());
+        watch.setUserId(userId);
+        watch.setNotificationLevel(request.getNotificationLevel());
+        
+        repositoryWatchRepository.save(watch);
+    }
+
+    @Transactional
+    public void unwatchRepository(UUID userId, String ownerUsername, String repoName) {
+        User owner = userRepository.findByUsername(ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
+
+        Repository repo = repositoryRepository.findByOwnerIdAndSlug(owner.getId(), repoName.toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
+
+        repositoryWatchRepository.findByRepositoryIdAndUserId(repo.getId(), userId)
+                .ifPresent(repositoryWatchRepository::delete);
     }
 
     @Transactional
@@ -152,17 +240,52 @@ public class RepositoryService {
 
         repo.softDelete();
         repositoryRepository.save(repo);
+
+        // Optional: rename or delete physical repository
+        // gitManagerService.deleteRepository(owner.getUsername(), repo.getSlug());
     }
 
-    private RepositoryResponse mapToResponseWithLookup(Repository repo) {
-        String ownerUsername = "";
-        if (repo.getOwnerType() == RepositoryOwnerType.USER) {
-            ownerUsername = userRepository.findById(repo.getOwnerId())
-                    .map(User::getUsername)
-                    .orElse("unknown");
+    @Transactional
+    public RepositoryResponse forkRepository(UUID userId, String ownerUsername, String repoName) {
+        User sourceOwner = userRepository.findByUsername(ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Source owner not found"));
+
+        Repository sourceRepo = repositoryRepository.findByOwnerIdAndSlug(sourceOwner.getId(), repoName.toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Source repository not found"));
+
+        permissionService.checkReadPermission(userId, sourceRepo);
+
+        User forker = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        String forkSlug = sourceRepo.getName().toLowerCase();
+        if (repositoryRepository.existsByOwnerIdAndSlug(userId, forkSlug)) {
+            throw new DuplicateResourceException("You already have a repository or fork with this name");
         }
-        return mapToResponse(repo, ownerUsername);
+
+        Repository forkRepo = new Repository();
+        forkRepo.setOwnerType(RepositoryOwnerType.USER);
+        forkRepo.setOwnerId(userId);
+        forkRepo.setName(sourceRepo.getName());
+        forkRepo.setSlug(forkSlug);
+        forkRepo.setDescription(sourceRepo.getDescription());
+        forkRepo.setVisibility(sourceRepo.getVisibility());
+        forkRepo.setForkedFromRepositoryId(sourceRepo.getId());
+
+        Repository savedFork = repositoryRepository.save(forkRepo);
+
+        io.devflow.repos.entity.RepositoryFork forkLink = new io.devflow.repos.entity.RepositoryFork();
+        forkLink.setSourceRepositoryId(sourceRepo.getId());
+        forkLink.setForkRepositoryId(savedFork.getId());
+        forkLink.setForkedById(userId);
+        repositoryForkRepository.save(forkLink);
+        
+        repositoryRepository.incrementForksCount(sourceRepo.getId());
+
+        return mapToResponse(savedFork, forker.getUsername());
     }
+
+
 
     private RepositoryResponse mapToResponse(Repository repo, String ownerUsername) {
         return RepositoryResponse.builder()

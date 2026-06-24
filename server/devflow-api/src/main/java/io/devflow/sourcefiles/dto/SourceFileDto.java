@@ -16,4 +16,6 @@ public class SourceFileDto {
     private SourceFileType fileType;
     private long sizeBytes;
     private boolean binary;
+    private String commitMessage;
+    private java.time.Instant lastModifiedAt;
 }
