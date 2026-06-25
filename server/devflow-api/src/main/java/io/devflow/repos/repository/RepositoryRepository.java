@@ -25,7 +25,7 @@ public interface RepositoryRepository extends JpaRepository<Repository, UUID> {
     void incrementStarsCount(@Param("id") UUID id);
 
     @Modifying
-    @Query("UPDATE Repository r SET r.starsCount = r.starsCount - 1 WHERE r.id = :id")
+    @Query("UPDATE Repository r SET r.starsCount = r.starsCount - 1 WHERE r.id = :id AND r.starsCount > 0")
     void decrementStarsCount(@Param("id") UUID id);
 
     @Modifying

@@ -4,7 +4,7 @@
 -- For now, since we use spring.flyway.baseline-on-migrate=true,
 -- Flyway will create the history table and mark this as applied if the DB already exists.
 
-SELECT 1;
+
 create table activity_logs (created_at timestamp(6) with time zone not null, actor_id uuid, entity_id uuid, id uuid not null, repository_id uuid, action varchar(80) not null, entity_type varchar(80) not null, description TEXT, metadata jsonb not null, primary key (id));
 create table attachments (created_at timestamp(6) with time zone not null, deleted_at timestamp(6) with time zone, size_bytes bigint not null, id uuid not null, target_id uuid, uploaded_by_id uuid, storage_provider varchar(50) not null, checksum_sha256 varchar(64), target_type varchar(80), mime_type varchar(120), original_filename varchar(255) not null, storage_key TEXT, stored_filename varchar(255), primary key (id));
 create table branch_commits (committed_at timestamp(6) with time zone not null, created_at timestamp(6) with time zone not null, branch_id uuid not null, commit_id uuid not null, id uuid not null, repository_id uuid not null, primary key (id), constraint uk_branch_commits_branch_commit unique (branch_id, commit_id));

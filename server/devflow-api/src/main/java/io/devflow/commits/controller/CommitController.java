@@ -42,8 +42,9 @@ public class CommitController {
     public ResponseEntity<org.springframework.data.domain.Page<CommitDto>> listCommits(
             @PathVariable String ownerUsername,
             @PathVariable String repoName,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String branchName,
             org.springframework.data.domain.Pageable pageable) {
         UUID currentUserId = securityUtils.getCurrentUserId().orElse(null);
-        return ResponseEntity.ok(commitService.listCommits(currentUserId, ownerUsername, repoName, pageable));
+        return ResponseEntity.ok(commitService.listCommits(currentUserId, ownerUsername, repoName, branchName, pageable));
     }
 }

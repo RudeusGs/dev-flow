@@ -78,6 +78,33 @@ public class SourceFileService {
         return files.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public String getFileContent(UUID currentUserId, String ownerUsername, String repoName, String branchName, String path) {
+        User owner = userRepository.findByUsername(ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
+
+        Repository repo = repositoryRepository.findByOwnerIdAndSlug(owner.getId(), repoName.toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
+
+        permissionService.checkReadPermission(currentUserId, repo);
+
+        String content = gitManagerService.getFileContent(ownerUsername, repoName, branchName, path);
+        if (content != null) {
+            return content;
+        }
+
+        // Fallback to database
+        Branch branch = branchRepository.findByRepositoryIdAndName(repo.getId(), branchName)
+                .orElseThrow(() -> new ResourceNotFoundException("Branch not found: " + branchName));
+
+        SourceFile file = sourceFileRepository.findByBranchIdAndPath(branch.getId(), path)
+                .orElseThrow(() -> new ResourceNotFoundException("Path not found: " + path));
+                
+        // In a real app we'd load blob content from a blob store or similar.
+        // But since this is fallback mock data, we just return a placeholder if there is no content field.
+        return "File content for " + file.getName() + " (Mock)";
+    }
+
     private SourceFileDto mapToDto(SourceFile file) {
         return SourceFileDto.builder()
                 .id(file.getId().toString())

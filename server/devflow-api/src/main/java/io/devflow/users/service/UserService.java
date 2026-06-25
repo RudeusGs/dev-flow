@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -85,8 +88,12 @@ public class UserService {
         User user = userRepository.findByUsername(username.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
-        return userFollowRepository.findByFollowingId(user.getId(), pageable)
-                .map(follow -> mapToSummaryDto(follow.getFollowerId()));
+        Page<UserFollow> follows = userFollowRepository.findByFollowingId(user.getId(), pageable);
+        List<UUID> followerIds = follows.stream().map(UserFollow::getFollowerId).collect(Collectors.toList());
+        Map<UUID, User> usersMap = userRepository.findAllById(followerIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return follows.map(follow -> mapToSummaryDto(usersMap.get(follow.getFollowerId())));
     }
 
     @Transactional(readOnly = true)
@@ -94,13 +101,16 @@ public class UserService {
         User user = userRepository.findByUsername(username.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
-        return userFollowRepository.findByFollowerId(user.getId(), pageable)
-                .map(follow -> mapToSummaryDto(follow.getFollowingId()));
+        Page<UserFollow> follows = userFollowRepository.findByFollowerId(user.getId(), pageable);
+        List<UUID> followingIds = follows.stream().map(UserFollow::getFollowingId).collect(Collectors.toList());
+        Map<UUID, User> usersMap = userRepository.findAllById(followingIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return follows.map(follow -> mapToSummaryDto(usersMap.get(follow.getFollowingId())));
     }
 
-    private UserSummaryDto mapToSummaryDto(UUID userId) {
-        return userRepository.findById(userId)
-                .map(u -> new UserSummaryDto(u.getId().toString(), u.getUsername(), u.getDisplayName(), u.getAvatarUrl()))
-                .orElse(new UserSummaryDto());
+    private UserSummaryDto mapToSummaryDto(User u) {
+        if (u == null) return new UserSummaryDto();
+        return new UserSummaryDto(u.getId().toString(), u.getUsername(), u.getDisplayName(), u.getAvatarUrl());
     }
 }

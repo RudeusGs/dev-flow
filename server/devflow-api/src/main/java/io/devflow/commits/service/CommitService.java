@@ -105,7 +105,7 @@ public class CommitService {
     }
 
     @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<CommitDto> listCommits(UUID currentUserId, String ownerUsername, String repoName, org.springframework.data.domain.Pageable pageable) {
+    public org.springframework.data.domain.Page<CommitDto> listCommits(UUID currentUserId, String ownerUsername, String repoName, String branchName, org.springframework.data.domain.Pageable pageable) {
         User owner = userRepository.findByUsername(ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
 
@@ -115,7 +115,7 @@ public class CommitService {
         permissionService.checkReadPermission(currentUserId, repo);
 
         // Limit the number of commits fetched from JGit to 50 for now
-        java.util.List<CommitDto> jgitCommits = gitManagerService.listCommits(ownerUsername, repoName, null, 50);
+        java.util.List<CommitDto> jgitCommits = gitManagerService.listCommits(ownerUsername, repoName, branchName, 50);
 
         if (!jgitCommits.isEmpty()) {
             return new org.springframework.data.domain.PageImpl<>(jgitCommits, pageable, jgitCommits.size());

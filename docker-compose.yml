@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: devflow_db
+    environment:
+      POSTGRES_USER: devflow_user
+      POSTGRES_PASSWORD: devflow_pass
+      POSTGRES_DB: devflow_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - devflow_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devflow_user -d devflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./server/devflow-api
+      dockerfile: Dockerfile
+    container_name: devflow_backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/devflow_db
+      - SPRING_DATASOURCE_USERNAME=devflow_user
+      - SPRING_DATASOURCE_PASSWORD=devflow_pass
+      - JWT_SECRET=8f7e258a698886d4e135e69e36eb10f63dc58bcf7047f3b3d4f877e68e4c76b911
+      - APP_GIT_STORAGE_PATH=/data/git-repos
+    ports:
+      - "8080:8080"
+    volumes:
+      - devflow_git_data:/data/git-repos
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: devflow_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  devflow_db_data:
+  devflow_git_data:

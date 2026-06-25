@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/repos/**").permitAll()
+                        .requestMatchers("/git/**").permitAll()
                         .anyRequest().authenticated()
                 );
 
