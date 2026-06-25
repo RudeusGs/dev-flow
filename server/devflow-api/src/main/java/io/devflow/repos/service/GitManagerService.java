@@ -12,6 +12,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.lib.ObjectLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -49,10 +50,28 @@ public class GitManagerService {
     }
 
     public File getRepositoryDir(String ownerUsername, String repoName) {
-        return gitProperties.getStorageLocation()
+        // Validate inputs to prevent path traversal
+        validatePathSegment(ownerUsername);
+        validatePathSegment(repoName);
+
+        Path resolved = gitProperties.getStorageLocation()
                 .resolve(ownerUsername)
                 .resolve(repoName + ".git")
-                .toFile();
+                .normalize();
+
+        if (!resolved.startsWith(gitProperties.getStorageLocation())) {
+            throw new IllegalArgumentException("Invalid repository path: path traversal detected");
+        }
+
+        return resolved.toFile();
+    }
+
+    private void validatePathSegment(String segment) {
+        if (segment == null || segment.isBlank()
+                || segment.contains("..") || segment.contains("/")
+                || segment.contains("\\") || segment.contains("\0")) {
+            throw new IllegalArgumentException("Invalid path segment: " + segment);
+        }
     }
 
     public void initBareRepository(String ownerUsername, String repoName) {
@@ -158,6 +177,41 @@ public class GitManagerService {
         return result;
     }
 
+    public String getFileContent(String ownerUsername, String repoName, String branchName, String path) {
+        File repoDir = getRepositoryDir(ownerUsername, repoName);
+        if (!repoDir.exists()) return null;
+
+        try (Git git = Git.open(repoDir);
+             Repository repository = git.getRepository();
+             RevWalk revWalk = new RevWalk(repository);
+             TreeWalk treeWalk = new TreeWalk(repository)) {
+
+            ObjectId branchId = repository.resolve(branchName == null ? "HEAD" : branchName);
+            if (branchId == null) {
+                return null;
+            }
+
+            RevCommit commit = revWalk.parseCommit(branchId);
+            RevTree tree = commit.getTree();
+
+            treeWalk.addTree(tree);
+            treeWalk.setRecursive(true);
+            treeWalk.setFilter(org.eclipse.jgit.treewalk.filter.PathFilter.create(path));
+
+            if (!treeWalk.next()) {
+                return null;
+            }
+
+            ObjectId objectId = treeWalk.getObjectId(0);
+            ObjectLoader loader = repository.open(objectId);
+            return new String(loader.getBytes(), StandardCharsets.UTF_8);
+
+        } catch (Exception e) {
+            log.error("Failed to read file content from JGit", e);
+            throw new RuntimeException("Failed to read file content", e);
+        }
+    }
+
     private io.devflow.sourcefiles.dto.SourceFileDto createSourceFileDto(TreeWalk treeWalk, RevCommit commit) {
         return io.devflow.sourcefiles.dto.SourceFileDto.builder()
                 .id(treeWalk.getObjectId(0).getName())
@@ -213,6 +267,8 @@ public class GitManagerService {
                 deleteDirectoryRecursively(file);
             }
         }
-        directory.delete();
+        if (!directory.delete()) {
+            log.warn("Failed to delete directory or file: {}", directory.getAbsolutePath());
+        }
     }
 }

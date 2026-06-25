@@ -34,4 +34,15 @@ public class SourceFileController {
         UUID currentUserId = securityUtils.getCurrentUserId().orElse(null);
         return ResponseEntity.ok(sourceFileService.listFiles(currentUserId, ownerUsername, repoName, branchName, path));
     }
+
+    @GetMapping("/content")
+    public ResponseEntity<String> getFileContent(
+            @PathVariable String ownerUsername,
+            @PathVariable String repoName,
+            @PathVariable String branchName,
+            @RequestParam String path) {
+        UUID currentUserId = securityUtils.getCurrentUserId().orElse(null);
+        String content = sourceFileService.getFileContent(currentUserId, ownerUsername, repoName, branchName, path);
+        return ResponseEntity.ok(content);
+    }
 }

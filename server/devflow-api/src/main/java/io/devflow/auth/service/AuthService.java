@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,7 +65,7 @@ public class AuthService {
         // Auto login after registration
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
+                        request.getUsername().toLowerCase(),
                         request.getPassword()
                 )
         );
@@ -83,7 +82,6 @@ public class AuthService {
                 )
         );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         User user = userRepository.findByUsernameOrEmail(request.getUsernameOrEmail(), request.getUsernameOrEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -78,11 +79,13 @@ public class RepositoryMemberService {
 
         permissionService.checkReadPermission(currentUserId, repo);
 
-        return memberRepository.findByRepositoryId(repo.getId()).stream()
-                .map(member -> {
-                    User user = userRepository.findById(member.getUserId()).orElse(null);
-                    return mapToDto(member, user);
-                })
+        List<RepositoryMember> members = memberRepository.findByRepositoryId(repo.getId());
+        List<UUID> userIds = members.stream().map(RepositoryMember::getUserId).collect(Collectors.toList());
+        Map<UUID, User> usersMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return members.stream()
+                .map(member -> mapToDto(member, usersMap.get(member.getUserId())))
                 .collect(Collectors.toList());
     }
 
